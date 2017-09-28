@@ -1,0 +1,71 @@
+/*
+ * Copyright 2017 Rundeck, Inc. (http://rundeck.com)
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+
+version '1.0.0'
+
+
+ext.rundeckPluginVersion = '1.2'
+ext.pluginClassNames=
+        'com.rundeck.plugins.aws.S3ResourceModelSource'
+ext.pluginName = 'S3 resource Model Source'
+ext.pluginDescription = 'AWS S3 Resource Model Source'
+
+apply plugin: 'java'
+apply plugin: 'groovy'
+
+sourceCompatibility = 1.8
+targetCompatibility = 1.8
+
+repositories {
+    mavenCentral()
+    mavenLocal()
+}
+
+configurations {
+    pluginLibs
+
+    compile {
+        extendsFrom pluginLibs
+    }
+}
+
+dependencies {
+    compile group: 'org.rundeck', name: 'rundeck-core', version: '2.10.0-SNAPSHOT'
+    pluginLibs group: 'com.amazonaws', name: 'aws-java-sdk-s3', version: '1.10.67'
+    testCompile "org.codehaus.groovy:groovy-all:2.3.7"
+    testCompile "org.spockframework:spock-core:0.7-groovy-2.0"
+    testCompile "cglib:cglib-nodep:2.2.2"
+    testCompile 'org.objenesis:objenesis:1.4'
+}
+
+task copyToLib(type: Copy) {
+    into "$buildDir/output/lib"
+    from configurations.pluginLibs
+}
+
+jar {
+    from "$buildDir/output"
+    manifest {
+        def libList = configurations.pluginLibs.collect{'lib/' + it.name}.join(' ')
+        attributes 'Rundeck-Plugin-Classnames': pluginClassNames
+        attributes 'Rundeck-Plugin-File-Version': version
+        attributes 'Rundeck-Plugin-Version': rundeckPluginVersion
+        attributes 'Rundeck-Plugin-Archive': 'true'
+        attributes 'Rundeck-Plugin-Libs': "${libList}"
+    }
+    dependsOn(copyToLib)
+}
