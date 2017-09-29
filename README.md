@@ -1,6 +1,6 @@
 # Rundeck S3 Resource model source
 
-This is a plugin for [Rundeck](http://rundeck.org) that uses [Amazon S3](http://aws.amazon.com/s3) to store resources model file.
+This is a plugin for [Rundeck](http://rundeck.org) > 2.10.0 that uses [Amazon S3](http://aws.amazon.com/s3) to store resources model file.
 
 ## Build
 
