@@ -33,7 +33,7 @@ To configure the AWS access credentials you can set these property values:
 `AWSSecretKey` : secret key, required if using `AWSAccessKeyId`
 
 `AWSCredentialsFile` : properties file which contains `accessKey` and `secretKey` entries.  Alternative to specifying
-the `AWSAccessKeyId and `AWSSecretKey`
+the `AWSAccessKeyId` and `AWSSecretKey`.
 
 S3 Connection uses these plugin configuration property values:
 
