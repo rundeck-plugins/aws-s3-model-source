@@ -35,9 +35,7 @@ To configure the AWS access credentials you can set these property values:
 `AWSCredentialsFile` : properties file which contains `accessKey` and `secretKey` entries.  Alternative to specifying
 the `AWSAccessKeyId and `AWSSecretKey`
 
-S3 configuration uses these plugin configuration property values:
-
-`bucket` : name of the S3 bucket to use
+S3 Connection uses these plugin configuration property values:
 
 `region` : AWS region name to use.
 
@@ -50,8 +48,11 @@ S3 configuration uses these plugin configuration property values:
 
 The resource file use this configurations:
 
+`bucket` : name of the S3 bucket to use
+
 `file` :  Path on the bucket with the node information.
 
 `extension` :  File format, can be `xml`,`yaml`or `json`.
 
 `writable`: Is the resource file writable or not.
+

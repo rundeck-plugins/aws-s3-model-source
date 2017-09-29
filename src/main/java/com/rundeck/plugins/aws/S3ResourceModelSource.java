@@ -79,42 +79,56 @@ public class S3ResourceModelSource implements ResourceModelSourceFactory,Describ
                     "json"
             ));
 
+    final static Map<String, Object> renderingOptionsAuthentication = getRenderOpt("Credentials",false);
+    final static Map<String, Object> renderingOptionsConnection = getRenderOpt("Connection",false);
+    final static Map<String, Object> renderingOptionsResource = getRenderOpt("Resource",false);
+
+    protected static Map<String, Object> getRenderOpt(String value, boolean secondary) {
+        Map<String, Object> ret = new HashMap<>();
+        ret.put(StringRenderingConstants.GROUP_NAME,value);
+        if(secondary){
+            ret.put(StringRenderingConstants.GROUPING,"secondary");
+        }
+        return ret;
+    }
+
 
     static Description DESC = DescriptionBuilder.builder()
             .name(PROVIDER_NAME)
             .title("AWS S3 remote model source")
             .description("Obtain nodes information from a file located in a S3 bucket")
             .property(PropertyUtil.string(KEY, "AWS Access Key", "AWS Access Key.", false,
-                    null))
+                    null,null,null, renderingOptionsAuthentication))
             .property(PropertyUtil.string(SECRET, "AWS Secret Key", "AWS Secret Key.", false,
-                    null))
+                    null,null,null, renderingOptionsAuthentication))
             .property(PropertyUtil.string(CREDENTIALFILE, "AWS Credentials File", "Path to a AWSCredentials.properties file " +
                     "containing 'accessKey' and 'secretKey'.", false,
-                    null))
-            .property(PropertyUtil.string(BUCKET, "Bucket name", "Bucket name.", true,
-                    null))
-            .property(PropertyUtil.string(FILE, "Resource file", "Path on the bucket with the node information.", true,
-                    null))
-            .property(PropertyUtil.select(EXTENSION,"File format",
-                    "File format.",
-                    true, "xml",formats))
+                    null,null,null, renderingOptionsAuthentication))
+
             .property(PropertyUtil.freeSelect(REGION,"S3 Region",
                     "AWS S3 Region to use.  You can use one of the supported region names.",
-                    true, "us-east-1",selectValues))
-
+                    true, "us-east-1",selectValues,null,null,renderingOptionsConnection))
             .property(PropertyUtil.string(ENDPOINT, "S3 Endpoint",
                     "S3 endpoint to connect to, the region is ignored if this is set.", false,
-                    null))
+                    null,null,null,renderingOptionsConnection))
             .property(PropertyUtil.bool(FORCEV4, "Force Signature v4",
                     "Whether to force use of Signature Version 4 authentication. Default: false",
-                    false,"false"))
+                    false,"false",null,renderingOptionsConnection))
             .property(PropertyUtil.bool(PATHSTYLE, "Use Path Style",
                     "Whether to access the Endpoint using `endpoint/bucket` style, default: false. The default will " +
                             "use DNS style `bucket.endpoint`, which may be incompatible with non-AWS S3-compatible services",
-                    false,"false"))
+                    false,"false",null,renderingOptionsConnection))
+
+            .property(PropertyUtil.string(BUCKET, "Bucket name", "Bucket name.", true,
+                    null,null,null,renderingOptionsResource))
+            .property(PropertyUtil.string(FILE, "Resource file", "Path on the bucket with the node information.", true,
+                    null,null,null,renderingOptionsResource))
+            .property(PropertyUtil.select(EXTENSION,"File format",
+                    "File format.",
+                    true, "xml",formats,null,renderingOptionsResource))
             .property(PropertyUtil.bool(WRITABLE, "Writable",
                     "Allow to write the remote file.",
-                    false,"false"))
+                    false,"false",null,renderingOptionsResource))
             .build();
 
 
