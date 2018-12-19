@@ -15,21 +15,29 @@
  */
 package com.rundeck.plugins.aws;
 
+import java.io.File;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Properties;
+
 import com.amazonaws.SDKGlobalConfiguration;
 import com.amazonaws.auth.PropertiesCredentials;
 import com.amazonaws.services.s3.S3ClientOptions;
-import com.dtolabs.rundeck.core.plugins.Plugin;
 import com.dtolabs.rundeck.core.common.Framework;
-import com.dtolabs.rundeck.core.plugins.configuration.*;
+import com.dtolabs.rundeck.core.plugins.Plugin;
+import com.dtolabs.rundeck.core.plugins.configuration.ConfigurationException;
+import com.dtolabs.rundeck.core.plugins.configuration.Describable;
+import com.dtolabs.rundeck.core.plugins.configuration.Description;
+import com.dtolabs.rundeck.core.plugins.configuration.PropertyUtil;
+import com.dtolabs.rundeck.core.plugins.configuration.StringRenderingConstants;
 import com.dtolabs.rundeck.core.resources.ResourceModelSource;
 import com.dtolabs.rundeck.core.resources.ResourceModelSourceFactory;
 import com.dtolabs.rundeck.plugins.ServiceNameConstants;
 import com.dtolabs.rundeck.plugins.util.DescriptionBuilder;
-
-
-import java.io.File;
-import java.io.IOException;
-import java.util.*;
 
 @Plugin(name = "aws-s3-source", service = ServiceNameConstants.ResourceModelSource)
 public class S3ResourceModelSource implements ResourceModelSourceFactory,Describable {
@@ -45,6 +53,7 @@ public class S3ResourceModelSource implements ResourceModelSourceFactory,Describ
     public static final String REGION = "region";
     public static final String ENDPOINT = "endpoint";
     public static final String FORCEV4 = "forcev4";
+    public static final String USESIGV2 = "useSigV2";
     public static final String PATHSTYLE = "pathstyle";
 
     public static final String FILE = "file";
@@ -114,6 +123,9 @@ public class S3ResourceModelSource implements ResourceModelSourceFactory,Describ
             .property(PropertyUtil.bool(FORCEV4, "Force Signature v4",
                     "Whether to force use of Signature Version 4 authentication. Default: false",
                     false,"false",null,renderingOptionsConnection))
+            .property(PropertyUtil.bool(USESIGV2, "Use Signature v2",
+                    "Use of Signature Version 2 authentication for old container. Default: false",
+                    false,"false",null,renderingOptionsConnection))
             .property(PropertyUtil.bool(PATHSTYLE, "Use Path Style",
                     "Whether to access the Endpoint using `endpoint/bucket` style, default: false. The default will " +
                             "use DNS style `bucket.endpoint`, which may be incompatible with non-AWS S3-compatible services",
@@ -173,7 +185,9 @@ public class S3ResourceModelSource implements ResourceModelSourceFactory,Describ
         if (Boolean.valueOf(properties.getProperty(WRITABLE))) {
             s3.setWritable();
         }
-
+        if (Boolean.valueOf(properties.getProperty(USESIGV2))) {
+            s3.setUseSigV2();
+        }
 
         if(Boolean.valueOf(properties.getProperty(PATHSTYLE))) {
             S3ClientOptions clientOptions = new S3ClientOptions();

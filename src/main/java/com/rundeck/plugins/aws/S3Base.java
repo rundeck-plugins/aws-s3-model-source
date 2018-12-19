@@ -16,8 +16,19 @@
 package com.rundeck.plugins.aws;
 
 
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.nio.file.Files;
+
+import org.apache.log4j.Logger;
+
 import com.amazonaws.AmazonClientException;
+import com.amazonaws.ClientConfiguration;
 import com.amazonaws.auth.AWSCredentials;
+import com.amazonaws.auth.BasicAWSCredentials;
 import com.amazonaws.auth.PropertiesCredentials;
 import com.amazonaws.regions.Region;
 import com.amazonaws.regions.RegionUtils;
@@ -35,10 +46,6 @@ import com.dtolabs.rundeck.core.resources.format.ResourceFormatParser;
 import com.dtolabs.rundeck.core.resources.format.ResourceFormatParserException;
 import com.dtolabs.rundeck.core.resources.format.UnsupportedFormatException;
 import com.dtolabs.utils.Streams;
-import org.apache.log4j.Logger;
-
-import java.io.*;
-import java.nio.file.Files;
 
 public class S3Base implements AWSCredentials,ResourceModelSource, WriteableModelSource {
 
@@ -57,6 +64,7 @@ public class S3Base implements AWSCredentials,ResourceModelSource, WriteableMode
     private boolean useRegion = false;
     private String endpoint;
     private boolean useEndpoint = false;
+    private boolean useSigV2 = false;
 
     private String bucket;
     private String filePath;
@@ -109,6 +117,10 @@ public class S3Base implements AWSCredentials,ResourceModelSource, WriteableMode
     public void setS3ClientOptions(S3ClientOptions clientOptions){
         this.clientOptions = clientOptions;
         this.useClientOptions = true;
+    }
+
+    public void setUseSigV2() {
+        this.useSigV2=true;
     }
 
     @Override
@@ -211,11 +223,29 @@ public class S3Base implements AWSCredentials,ResourceModelSource, WriteableMode
     private AmazonS3 getAmazonS3(){
         if(null == amazonS3){
             if(useKey) {
-                amazonS3 = new AmazonS3Client(this);
+                if (useSigV2) {
+                    ClientConfiguration config = new ClientConfiguration();
+                    config.setSignerOverride("S3SignerType");
+                    amazonS3 = new AmazonS3Client(new BasicAWSCredentials(this.AWSAccessKeyId, this.AWSSecretKey), config);
+                } else {
+                    amazonS3 = new AmazonS3Client(this);
+                }
             }else if(useFile){
-                amazonS3 = new AmazonS3Client(cred);
+                if (useSigV2) {
+                    ClientConfiguration opts = new ClientConfiguration();
+                    opts.setSignerOverride("S3SignerType");
+                    amazonS3 = new AmazonS3Client(cred, opts);
+                } else {
+                    amazonS3 = new AmazonS3Client(cred);
+                }
             }else{
-                amazonS3 = new AmazonS3Client();
+                if (useSigV2) {
+                    ClientConfiguration opts = new ClientConfiguration();
+                    opts.setSignerOverride("S3SignerType");
+                    amazonS3 = new AmazonS3Client(opts);
+                } else {
+                    amazonS3 = new AmazonS3Client();
+                }
             }
             if(useRegion) {
                 Region region = RegionUtils.getRegion(regionName);
