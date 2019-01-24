@@ -22,7 +22,7 @@ ext.rundeckPluginVersion = '1.2'
 ext.pluginClassNames=
         'com.rundeck.plugins.aws.S3ResourceModelSource'
 ext.pluginName = 'S3 resource Model Source'
-ext.pluginDescription = 'AWS S3 Resource Model Source'
+ext.pluginDescription = 'Use Amazon S3 to store resources model file.'
 
 apply plugin: 'java'
 apply plugin: 'groovy'
@@ -61,6 +61,14 @@ jar {
     from "$buildDir/output"
     manifest {
         def libList = configurations.pluginLibs.collect{'lib/' + it.name}.join(' ')
+        attributes 'Rundeck-Plugin-Name' : pluginName
+        attributes 'Rundeck-Plugin-Description' : pluginDescription
+        attributes 'Rundeck-Plugin-Rundeck-Compatibility-Version': '2.10.0+'
+        attributes 'Rundeck-Plugin-Tags': 'java,resource model,aws,s3'
+        attributes 'Rundeck-Plugin-License': 'Apache 2.0'
+        attributes 'Rundeck-Plugin-Source-Link': 'https://github.com/rundeck-plugins/aws-s3-model-source'
+        attributes 'Rundeck-Plugin-Target-Host-Compatibility': 'all'
+        attributes 'Rundeck-Plugin-Author': 'Rundeck, Inc.'
         attributes 'Rundeck-Plugin-Classnames': pluginClassNames
         attributes 'Rundeck-Plugin-File-Version': version
         attributes 'Rundeck-Plugin-Version': rundeckPluginVersion
