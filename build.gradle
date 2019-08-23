@@ -14,8 +14,7 @@
  * limitations under the License.
  */
 
-
-version '1.0.1'
+version '1.0.2'
 
 
 ext.rundeckPluginVersion = '1.2'
@@ -45,7 +44,9 @@ configurations {
 
 dependencies {
     compile group: 'org.rundeck', name: 'rundeck-core', version: '2.10.0'
-    pluginLibs group: 'com.amazonaws', name: 'aws-java-sdk-s3', version: '1.10.67'
+    pluginLibs ('com.amazonaws:aws-java-sdk-s3:1.11.616') {
+        exclude group: "com.fasterxml.jackson.core"
+    }
     testCompile "org.codehaus.groovy:groovy-all:2.3.7"
     testCompile "org.spockframework:spock-core:0.7-groovy-2.0"
     testCompile "cglib:cglib-nodep:2.2.2"
