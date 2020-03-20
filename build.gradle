@@ -47,6 +47,10 @@ dependencies {
     pluginLibs ('com.amazonaws:aws-java-sdk-s3:1.11.743') {
         exclude group: "com.fasterxml.jackson.core"
     }
+    pluginLibs ('com.amazonaws:aws-java-sdk-sts:1.11.743') {
+        exclude group: "com.fasterxml.jackson.core"
+    }
+
     testCompile "org.codehaus.groovy:groovy-all:2.3.7"
     testCompile "org.spockframework:spock-core:0.7-groovy-2.0"
     testCompile "cglib:cglib-nodep:2.2.2"
