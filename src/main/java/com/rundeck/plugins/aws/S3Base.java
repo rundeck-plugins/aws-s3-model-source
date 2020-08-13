@@ -23,7 +23,6 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.file.Files;
 
-import org.apache.log4j.Logger;
 
 import com.amazonaws.AmazonClientException;
 import com.amazonaws.ClientConfiguration;
@@ -46,10 +45,12 @@ import com.dtolabs.rundeck.core.resources.format.ResourceFormatParser;
 import com.dtolabs.rundeck.core.resources.format.ResourceFormatParserException;
 import com.dtolabs.rundeck.core.resources.format.UnsupportedFormatException;
 import com.dtolabs.utils.Streams;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class S3Base implements AWSCredentials,ResourceModelSource, WriteableModelSource {
 
-    private static final Logger logger = Logger.getLogger(S3Base.class);
+    private static final Logger logger = LoggerFactory.getLogger(S3Base.class);
 
     private String AWSAccessKeyId;
     private String AWSSecretKey;
