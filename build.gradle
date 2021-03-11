@@ -55,9 +55,11 @@ dependencies {
     compile "org.slf4j:slf4j-api:1.7.30"
     pluginLibs ('com.amazonaws:aws-java-sdk-s3:1.11.743') {
         exclude group: "com.fasterxml.jackson.core"
+        exclude group: "com.fasterxml.jackson.dataformat"
     }
     pluginLibs ('com.amazonaws:aws-java-sdk-sts:1.11.743') {
         exclude group: "com.fasterxml.jackson.core"
+        exclude group: "com.fasterxml.jackson.dataformat"
     }
 
     testCompile "org.codehaus.groovy:groovy-all:2.3.7"
