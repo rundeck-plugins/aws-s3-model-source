@@ -39,9 +39,9 @@ import com.dtolabs.rundeck.core.resources.ResourceModelSourceFactory;
 import com.dtolabs.rundeck.plugins.ServiceNameConstants;
 import com.dtolabs.rundeck.plugins.util.DescriptionBuilder;
 
-@Plugin(name = "aws-s3-source-chris", service = ServiceNameConstants.ResourceModelSource)
+@Plugin(name = "aws-s3-source", service = ServiceNameConstants.ResourceModelSource)
 public class S3ResourceModelSource implements ResourceModelSourceFactory,Describable {
-    public static final String PROVIDER_NAME = "aws-s3-source-chris";
+    public static final String PROVIDER_NAME = "aws-s3-source";
 
     private Framework framework;
 
@@ -107,11 +107,11 @@ public class S3ResourceModelSource implements ResourceModelSourceFactory,Describ
 
     static Description DESC = DescriptionBuilder.builder()
             .name(PROVIDER_NAME)
-            .title("AWS S3 remote model source - TEST")
+            .title("AWS S3 remote model source")
             .description("Obtain nodes information from a file located in a S3 bucket")
-            .property(PropertyUtil.string(KEY, "AWS Access Key", "AWS Access Key.  - TEST", false,
+            .property(PropertyUtil.string(KEY, "AWS Access Key", "AWS Access Key.", false,
                     null,null,null, renderingOptionsAuthentication))
-            .property(PropertyUtil.string(SECRET, "AWS Secret Key", "AWS Secret Key.  - TEST", false,
+            .property(PropertyUtil.string(SECRET, "AWS Secret Key", "AWS Secret Key.", false,
                     null,null,null, renderingOptionsAuthentication))
             .property(PropertyUtil.string(CREDENTIALFILE, "AWS Credentials File  - TEST", "Path to a AWSCredentials.properties file " +
                     "containing 'accessKey' and 'secretKey'.", false,
