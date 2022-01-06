@@ -113,7 +113,7 @@ public class S3ResourceModelSource implements ResourceModelSourceFactory,Describ
                     null,null,null, renderingOptionsAuthentication))
             .property(PropertyUtil.string(SECRET, "AWS Secret Key", "AWS Secret Key.", false,
                     null,null,null, renderingOptionsAuthentication))
-            .property(PropertyUtil.string(CREDENTIALFILE, "AWS Credentials File  - TEST", "Path to a AWSCredentials.properties file " +
+            .property(PropertyUtil.string(CREDENTIALFILE, "AWS Credentials File", "Path to a AWSCredentials.properties file " +
                     "containing 'accessKey' and 'secretKey'.", false,
                     null,null,null, renderingOptionsAuthentication))
 
