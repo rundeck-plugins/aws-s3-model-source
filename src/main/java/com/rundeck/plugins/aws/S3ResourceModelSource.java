@@ -39,9 +39,9 @@ import com.dtolabs.rundeck.core.resources.ResourceModelSourceFactory;
 import com.dtolabs.rundeck.plugins.ServiceNameConstants;
 import com.dtolabs.rundeck.plugins.util.DescriptionBuilder;
 
-@Plugin(name = "aws-s3-source", service = ServiceNameConstants.ResourceModelSource)
+@Plugin(name = "aws-s3-source-chris", service = ServiceNameConstants.ResourceModelSource)
 public class S3ResourceModelSource implements ResourceModelSourceFactory,Describable {
-    public static final String PROVIDER_NAME = "aws-s3-source";
+    public static final String PROVIDER_NAME = "aws-s3-source-chris";
 
     private Framework framework;
 
@@ -88,15 +88,18 @@ public class S3ResourceModelSource implements ResourceModelSourceFactory,Describ
                     "json"
             ));
 
-    final static Map<String, Object> renderingOptionsAuthentication = getRenderOpt("Credentials",false);
-    final static Map<String, Object> renderingOptionsConnection = getRenderOpt("Connection",false);
-    final static Map<String, Object> renderingOptionsResource = getRenderOpt("Resource",false);
+    final static Map<String, Object> renderingOptionsAuthentication = getRenderOpt("Credentials",false, true);
+    final static Map<String, Object> renderingOptionsConnection = getRenderOpt("Connection",false, false);
+    final static Map<String, Object> renderingOptionsResource = getRenderOpt("Resource",false, false);
 
-    protected static Map<String, Object> getRenderOpt(String value, boolean secondary) {
+    protected static Map<String, Object> getRenderOpt(String value, boolean secondary, boolean password) {
         Map<String, Object> ret = new HashMap<>();
         ret.put(StringRenderingConstants.GROUP_NAME,value);
         if(secondary){
             ret.put(StringRenderingConstants.GROUPING,"secondary");
+        }
+        if(password){
+            ret.put("displayType",StringRenderingConstants.DisplayType.PASSWORD);
         }
         return ret;
     }
@@ -104,13 +107,13 @@ public class S3ResourceModelSource implements ResourceModelSourceFactory,Describ
 
     static Description DESC = DescriptionBuilder.builder()
             .name(PROVIDER_NAME)
-            .title("AWS S3 remote model source")
+            .title("AWS S3 remote model source - TEST")
             .description("Obtain nodes information from a file located in a S3 bucket")
-            .property(PropertyUtil.string(KEY, "AWS Access Key", "AWS Access Key.", false,
+            .property(PropertyUtil.string(KEY, "AWS Access Key", "AWS Access Key.  - TEST", false,
                     null,null,null, renderingOptionsAuthentication))
-            .property(PropertyUtil.string(SECRET, "AWS Secret Key", "AWS Secret Key.", false,
+            .property(PropertyUtil.string(SECRET, "AWS Secret Key", "AWS Secret Key.  - TEST", false,
                     null,null,null, renderingOptionsAuthentication))
-            .property(PropertyUtil.string(CREDENTIALFILE, "AWS Credentials File", "Path to a AWSCredentials.properties file " +
+            .property(PropertyUtil.string(CREDENTIALFILE, "AWS Credentials File  - TEST", "Path to a AWSCredentials.properties file " +
                     "containing 'accessKey' and 'secretKey'.", false,
                     null,null,null, renderingOptionsAuthentication))
 
