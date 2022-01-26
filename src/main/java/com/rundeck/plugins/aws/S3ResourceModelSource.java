@@ -88,15 +88,18 @@ public class S3ResourceModelSource implements ResourceModelSourceFactory,Describ
                     "json"
             ));
 
-    final static Map<String, Object> renderingOptionsAuthentication = getRenderOpt("Credentials",false);
-    final static Map<String, Object> renderingOptionsConnection = getRenderOpt("Connection",false);
-    final static Map<String, Object> renderingOptionsResource = getRenderOpt("Resource",false);
+    final static Map<String, Object> renderingOptionsAuthentication = getRenderOpt("Credentials",false, true);
+    final static Map<String, Object> renderingOptionsConnection = getRenderOpt("Connection",false, false);
+    final static Map<String, Object> renderingOptionsResource = getRenderOpt("Resource",false, false);
 
-    protected static Map<String, Object> getRenderOpt(String value, boolean secondary) {
+    protected static Map<String, Object> getRenderOpt(String value, boolean secondary, boolean password) {
         Map<String, Object> ret = new HashMap<>();
         ret.put(StringRenderingConstants.GROUP_NAME,value);
         if(secondary){
             ret.put(StringRenderingConstants.GROUPING,"secondary");
+        }
+        if(password){
+            ret.put("displayType",StringRenderingConstants.DisplayType.PASSWORD);
         }
         return ret;
     }
