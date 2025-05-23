@@ -6,6 +6,7 @@ nexusPublish = "2.0.0"
 spock = "2.3-groovy-3.0"
 awsSdk = "1.12.708"
 cglib = "2.2.2"
+byteBuddy = "1.14.12"
 objenesis = "1.4"
 slf4j = "1.7.30"
 
@@ -17,10 +18,11 @@ awsSdkS3 = { group = "com.amazonaws", name = "aws-java-sdk-s3", version.ref = "a
 awsSdkSts = { group = "com.amazonaws", name = "aws-java-sdk-sts", version.ref = "awsSdk" }
 cglibNodep = { group = "cglib", name = "cglib-nodep", version.ref = "cglib" }
 objenesis = { group = "org.objenesis", name = "objenesis", version.ref = "objenesis" }
+byteBuddy = { group = "net.bytebuddy", name = "byte-buddy", version.ref = "byteBuddy" }
 slf4jApi = { group = "org.slf4j", name = "slf4j-api", version.ref = "slf4j" }
 
 [bundles]
-testLibs = ["groovyAll", "spockCore", "cglibNodep", "objenesis"]
+testLibs = ["groovyAll", "spockCore", "cglibNodep", "objenesis", "byteBuddy"]
 
 [plugins]
 axionRelease = { id = "pl.allegro.tech.build.axion-release", version.ref = "axionRelease" }
