@@ -4,7 +4,7 @@ import com.amazonaws.AmazonClientException
 import com.amazonaws.services.s3.AmazonS3
 import com.amazonaws.services.s3.model.ObjectMetadata
 import com.amazonaws.services.s3.model.S3Object
-import com.dtolabs.rundeck.core.common.Framework
+import com.dtolabs.rundeck.core.common.IFramework
 import com.dtolabs.rundeck.core.common.INodeSet
 import com.dtolabs.rundeck.core.resources.ResourceModelSourceException
 import com.dtolabs.rundeck.core.resources.format.ResourceFormatParser
@@ -172,18 +172,15 @@ class S3BaseSpec extends Specification{
     }
 
 
+    private IFramework getFramework(INodeSet nodeSet) {
+        return Mock(IFramework) {
+            _ * getResourceFormatParserService() >> Mock(ResourceFormatParserService) {
+                _ * getParserForMIMEType(_) >> Mock(ResourceFormatParser) {
+                    _ * parseDocument(_) >> nodeSet
 
-    private Framework getFramework(INodeSet nodeSet){
-        def resourceFormatParser = Mock(ResourceFormatParser){
-            parseDocument(_) >> nodeSet
+                }
+            }
         }
-        def resourceFormatParserService = Mock(ResourceFormatParserService){
-            getParserForMIMEType(_) >> resourceFormatParser
-        }
-        def framework = Mock(Framework){
-            getResourceFormatParserService()>> resourceFormatParserService
-        }
-        return framework
     }
 
 }
