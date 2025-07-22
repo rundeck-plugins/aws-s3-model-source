@@ -35,7 +35,7 @@ import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.AmazonS3Client;
 import com.amazonaws.services.s3.S3ClientOptions;
 import com.amazonaws.services.s3.model.S3Object;
-import com.dtolabs.rundeck.core.common.Framework;
+import com.dtolabs.rundeck.core.common.IFramework;
 import com.dtolabs.rundeck.core.common.INodeSet;
 import com.dtolabs.rundeck.core.resources.ResourceModelSource;
 import com.dtolabs.rundeck.core.resources.ResourceModelSourceException;
@@ -74,7 +74,7 @@ public class S3Base implements AWSCredentials,ResourceModelSource, WriteableMode
 
     private boolean writable=false;
 
-    private Framework framework;
+    private IFramework framework;
     private AmazonS3 amazonS3;
 
 
@@ -83,7 +83,7 @@ public class S3Base implements AWSCredentials,ResourceModelSource, WriteableMode
     }
 
     public S3Base(String bucket, String filePath,
-           String extension, Framework framework){
+           String extension, IFramework framework){
         this.bucket=bucket;
         this.filePath=filePath;
         this.extension=extension;

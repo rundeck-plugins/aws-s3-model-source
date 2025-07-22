@@ -1,0 +1,29 @@
+[versions]
+axionRelease = "1.18.18"
+groovy = "3.0.24"
+rundeckCore = "5.10.0-20250312"
+nexusPublish = "2.0.0"
+spock = "2.3-groovy-3.0"
+awsSdk = "1.12.708"
+cglib = "2.2.2"
+byteBuddy = "1.14.12"
+objenesis = "1.4"
+slf4j = "1.7.30"
+
+[libraries]
+rundeckCore = { group = "org.rundeck", name = "rundeck-core", version.ref = "rundeckCore" }
+groovyAll = { group = "org.codehaus.groovy", name = "groovy-all", version.ref = "groovy" }
+spockCore = { group = "org.spockframework", name = "spock-core", version.ref = "spock" }
+awsSdkS3 = { group = "com.amazonaws", name = "aws-java-sdk-s3", version.ref = "awsSdk" }
+awsSdkSts = { group = "com.amazonaws", name = "aws-java-sdk-sts", version.ref = "awsSdk" }
+cglibNodep = { group = "cglib", name = "cglib-nodep", version.ref = "cglib" }
+objenesis = { group = "org.objenesis", name = "objenesis", version.ref = "objenesis" }
+byteBuddy = { group = "net.bytebuddy", name = "byte-buddy", version.ref = "byteBuddy" }
+slf4jApi = { group = "org.slf4j", name = "slf4j-api", version.ref = "slf4j" }
+
+[bundles]
+testLibs = ["groovyAll", "spockCore", "cglibNodep", "objenesis", "byteBuddy"]
+
+[plugins]
+axionRelease = { id = "pl.allegro.tech.build.axion-release", version.ref = "axionRelease" }
+nexusPublish = { id = "io.github.gradle-nexus.publish-plugin", version.ref = "nexusPublish" }

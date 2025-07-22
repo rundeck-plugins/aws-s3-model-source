@@ -1,49 +1,36 @@
-import org.gradle.api.tasks.testing.Test
-
-/*
- * Copyright 2017 Rundeck, Inc. (http://rundeck.com)
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-plugins{
-    id 'pl.allegro.tech.build.axion-release' version '1.13.4'
+plugins {
+    id 'java'
+    id 'groovy'
+    id 'idea'
+    alias(libs.plugins.axionRelease)
+    alias(libs.plugins.nexusPublish)
 }
 
-
-ext.rundeckPluginVersion = '1.2'
-ext.pluginClassNames=
-        'com.rundeck.plugins.aws.S3ResourceModelSource'
+group = 'org.rundeck.plugins'
+ext.pluginClassNames='com.rundeck.plugins.aws.S3ResourceModelSource'
 ext.pluginName = 'S3 resource Model Source'
 ext.pluginDescription = 'Use Amazon S3 to store resources model file.'
+ext.publishName = "S3 Resource Model Source ${project.version}"
+ext.githubSlug = 'rundeck-plugins/aws-s3-model-source'
+ext.developers = [
+        [id: 'gschueler', name: 'Greg Schueler', email: 'greg@rundeck.com']
+]
 
-apply plugin: 'java'
-apply plugin: 'groovy'
-
-sourceCompatibility = 1.8
-targetCompatibility = 1.8
-
-repositories {
-    mavenCentral()
-    mavenLocal()
-}
+ext.rundeckPluginVersion = '1.2'
 
 scmVersion {
     tag {
         prefix = 'v'
         versionSeparator = ''
     }
+    ignoreUncommittedChanges = true
 }
-version scmVersion.version
+
+allprojects {
+    project.version = scmVersion.version
+    apply from: "${rootDir}/gradle/java.gradle"
+}
+
 configurations {
     pluginLibs
 
@@ -52,22 +39,27 @@ configurations {
     }
 }
 
+repositories {
+    mavenCentral()
+    mavenLocal()
+}
+
 dependencies {
-    implementation group: 'org.rundeck', name: 'rundeck-core', version: '4.13.0-20230515'
-    implementation "org.slf4j:slf4j-api:1.7.30"
-    pluginLibs ('com.amazonaws:aws-java-sdk-s3:1.12.708') {
+    implementation(libs.rundeckCore) {
+        exclude group: "com.google.guava"
+    }
+    implementation libs.slf4jApi
+    
+    pluginLibs(libs.awsSdkS3) {
         exclude group: "com.fasterxml.jackson.core"
         exclude group: "com.fasterxml.jackson.dataformat"
     }
-    pluginLibs ('com.amazonaws:aws-java-sdk-sts:1.11.743') {
+    pluginLibs(libs.awsSdkSts) {
         exclude group: "com.fasterxml.jackson.core"
         exclude group: "com.fasterxml.jackson.dataformat"
     }
 
-    testImplementation "org.codehaus.groovy:groovy-all:3.0.9"
-    testImplementation "org.spockframework:spock-core:2.0-groovy-3.0"
-    testImplementation "cglib:cglib-nodep:2.2.2"
-    testImplementation 'org.objenesis:objenesis:1.4'
+    testImplementation libs.bundles.testLibs
 }
 
 task copyToLib(type: Copy) {
@@ -88,14 +80,28 @@ jar {
         attributes 'Rundeck-Plugin-Target-Host-Compatibility': 'all'
         attributes 'Rundeck-Plugin-Author': 'Rundeck, Inc.'
         attributes 'Rundeck-Plugin-Classnames': pluginClassNames
-        attributes 'Rundeck-Plugin-File-Version': version
+        attributes 'Rundeck-Plugin-File-Version': project.version
         attributes 'Rundeck-Plugin-Version': rundeckPluginVersion
         attributes 'Rundeck-Plugin-Archive': 'true'
         attributes 'Rundeck-Plugin-Libs': "${libList}"
     }
-    dependsOn(copyToLib)
 }
 
-tasks.withType(Test) {
+//set jar task to depend on copyToLib
+jar.dependsOn(copyToLib)
+
+test {
     useJUnitPlatform()
 }
+
+nexusPublishing {
+    packageGroup = 'org.rundeck.plugins'
+    repositories {
+        sonatype {
+            nexusUrl.set(uri("https://ossrh-staging-api.central.sonatype.com/service/local/"))
+            snapshotRepositoryUrl.set(uri("https://central.sonatype.com/repository/maven-snapshots/"))
+        }
+    }
+}
+
+apply from: "${rootDir}/gradle/publishing.gradle"

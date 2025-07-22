@@ -27,7 +27,7 @@ import java.util.Properties;
 import com.amazonaws.SDKGlobalConfiguration;
 import com.amazonaws.auth.PropertiesCredentials;
 import com.amazonaws.services.s3.S3ClientOptions;
-import com.dtolabs.rundeck.core.common.Framework;
+import com.dtolabs.rundeck.core.common.IFramework;
 import com.dtolabs.rundeck.core.plugins.Plugin;
 import com.dtolabs.rundeck.core.plugins.configuration.ConfigurationException;
 import com.dtolabs.rundeck.core.plugins.configuration.Describable;
@@ -43,7 +43,7 @@ import com.dtolabs.rundeck.plugins.util.DescriptionBuilder;
 public class S3ResourceModelSource implements ResourceModelSourceFactory,Describable {
     public static final String PROVIDER_NAME = "aws-s3-source";
 
-    private Framework framework;
+    private IFramework framework;
 
 
     public static final String KEY = "key";
@@ -151,7 +151,7 @@ public class S3ResourceModelSource implements ResourceModelSourceFactory,Describ
         return DESC;
     }
 
-    public S3ResourceModelSource(final Framework framework) {
+    public S3ResourceModelSource(final IFramework framework) {
         this.framework = framework;
     }
 
