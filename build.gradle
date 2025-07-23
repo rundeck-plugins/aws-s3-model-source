@@ -53,7 +53,7 @@ configurations {
 }
 
 dependencies {
-    implementation group: 'org.rundeck', name: 'rundeck-core', version: '4.13.0-20230515'
+    implementation group: 'org.rundeck', name: 'rundeck-core', version: '5.14.0-rc1-20250722'
     implementation "org.slf4j:slf4j-api:1.7.30"
     pluginLibs ('com.amazonaws:aws-java-sdk-s3:1.12.708') {
         exclude group: "com.fasterxml.jackson.core"
