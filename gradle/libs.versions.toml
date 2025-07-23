@@ -1,7 +1,7 @@
 [versions]
 axionRelease = "1.18.18"
 groovy = "3.0.24"
-rundeckCore = "5.10.0-20250312"
+rundeckCore = "5.14.0-rc1-20250722"
 nexusPublish = "2.0.0"
 spock = "2.3-groovy-3.0"
 awsSdk = "1.12.708"
