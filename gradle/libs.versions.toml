@@ -9,6 +9,8 @@ cglib = "2.2.2"
 byteBuddy = "1.14.12"
 objenesis = "1.4"
 slf4j = "1.7.30"
+# Security overrides for transitive dependencies
+commonsLang3 = "3.18.0"
 
 [libraries]
 rundeckCore = { group = "org.rundeck", name = "rundeck-core", version.ref = "rundeckCore" }
@@ -20,6 +22,7 @@ cglibNodep = { group = "cglib", name = "cglib-nodep", version.ref = "cglib" }
 objenesis = { group = "org.objenesis", name = "objenesis", version.ref = "objenesis" }
 byteBuddy = { group = "net.bytebuddy", name = "byte-buddy", version.ref = "byteBuddy" }
 slf4jApi = { group = "org.slf4j", name = "slf4j-api", version.ref = "slf4j" }
+commonsLang3 = { module = "org.apache.commons:commons-lang3", version.ref = "commonsLang3" }
 
 [bundles]
 testLibs = ["groovyAll", "spockCore", "cglibNodep", "objenesis", "byteBuddy"]
