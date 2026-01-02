@@ -6,7 +6,7 @@ plugins {
     alias(libs.plugins.nexusPublish)
 }
 
-group = 'org.rundeck.plugins'
+group = 'com.github.rundeck-plugins'
 ext.pluginClassNames='com.rundeck.plugins.aws.S3ResourceModelSource'
 ext.pluginName = 'S3 resource Model Source'
 ext.pluginDescription = 'Use Amazon S3 to store resources model file.'
@@ -28,6 +28,9 @@ scmVersion {
 
 allprojects {
     project.version = scmVersion.version
+
+// Override version for Grails 7 upgrade
+project.version = '1.0.11-grails7-upgrade-test'
     apply from: "${rootDir}/gradle/java.gradle"
 }
 
@@ -40,8 +43,8 @@ configurations {
 }
 
 repositories {
+    mavenLocal()  // Must be FIRST for Grails 7 development
     mavenCentral()
-    mavenLocal()
 }
 
 dependencies {
@@ -104,10 +107,17 @@ jar.dependsOn(copyToLib)
 
 test {
     useJUnitPlatform()
+    
+    // Java 17+ module access for cglib/Spock mocking
+    jvmArgs = [
+        '--add-opens=java.base/java.lang=ALL-UNNAMED',
+        '--add-opens=java.base/java.util=ALL-UNNAMED',
+        '--add-opens=java.base/java.lang.reflect=ALL-UNNAMED'
+    ]
 }
 
 nexusPublishing {
-    packageGroup = 'org.rundeck.plugins'
+    packageGroup = 'com.github.rundeck-plugins'
     repositories {
         sonatype {
             nexusUrl.set(uri("https://ossrh-staging-api.central.sonatype.com/service/local/"))
