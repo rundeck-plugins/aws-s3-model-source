@@ -43,7 +43,14 @@ configurations {
 }
 
 repositories {
-    mavenLocal()  // Must be FIRST for Grails 7 development
+    mavenLocal()
+    maven {
+        name = 'Central Portal Snapshots'
+        url = 'https://central.sonatype.com/repository/maven-snapshots/'
+        content {
+            includeGroup('org.rundeck')
+        }
+    }  // Must be FIRST for Grails 7 development
     mavenCentral()
 }
 
