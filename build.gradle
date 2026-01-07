@@ -30,7 +30,7 @@ allprojects {
     project.version = scmVersion.version
 
 // Override version for Grails 7 upgrade
-project.version = '1.0.13-grails7-upgrade-test'
+project.version = '1.0.14-grails7-upgrade-test'
     apply from: "${rootDir}/gradle/java.gradle"
 }
 

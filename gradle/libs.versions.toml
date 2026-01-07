@@ -10,7 +10,7 @@ byteBuddy = "1.14.12"
 objenesis = "1.4"
 slf4j = "1.7.30"
 # Security overrides for transitive dependencies
-commonsLang3 = "3.18.0"
+commonsLang3 = "3.17.0"
 
 [libraries]
 rundeckCore = { group = "org.rundeck", name = "rundeck-core", version.ref = "rundeckCore" }
