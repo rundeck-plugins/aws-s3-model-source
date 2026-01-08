@@ -6,7 +6,7 @@ plugins {
     alias(libs.plugins.nexusPublish)
 }
 
-group = 'com.github.rundeck-plugins'
+group = 'com.rundeck.plugins'
 ext.pluginClassNames='com.rundeck.plugins.aws.S3ResourceModelSource'
 ext.pluginName = 'S3 resource Model Source'
 ext.pluginDescription = 'Use Amazon S3 to store resources model file.'
@@ -20,17 +20,15 @@ ext.rundeckPluginVersion = '1.2'
 
 scmVersion {
     tag {
-        prefix = 'v'
+        prefix = ''           // NO "v" prefix - see PLUGIN_TAGGING_ARCHITECTURE.md
         versionSeparator = ''
     }
     ignoreUncommittedChanges = true
+    versionCreator 'simple'  // Use simple version creator (just tag name)
 }
 
 allprojects {
-    project.version = scmVersion.version
-
-// Override version for Grails 7 upgrade
-project.version = '1.0.14-grails7-upgrade-test'
+    project.version = scmVersion.version  // Dynamic version from git tag
     apply from: "${rootDir}/gradle/java.gradle"
 }
 
@@ -124,7 +122,7 @@ test {
 }
 
 nexusPublishing {
-    packageGroup = 'com.github.rundeck-plugins'
+    packageGroup = 'com.rundeck.plugins'
     repositories {
         sonatype {
             nexusUrl.set(uri("https://ossrh-staging-api.central.sonatype.com/service/local/"))
