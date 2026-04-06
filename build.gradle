@@ -6,7 +6,7 @@ plugins {
     alias(libs.plugins.nexusPublish)
 }
 
-group = 'com.rundeck.plugins'
+group = 'org.rundeck.plugins'
 ext.pluginClassNames='com.rundeck.plugins.aws.S3ResourceModelSource'
 ext.pluginName = 'S3 resource Model Source'
 ext.pluginDescription = 'Use Amazon S3 to store resources model file.'
@@ -53,7 +53,10 @@ repositories {
 }
 
 dependencies {
-    implementation(libs.rundeckCore) {
+    compileOnly(libs.rundeckCore) {
+        exclude group: "com.google.guava"
+    }
+    testImplementation(libs.rundeckCore) {
         exclude group: "com.google.guava"
     }
     implementation libs.slf4jApi
@@ -122,7 +125,7 @@ test {
 }
 
 nexusPublishing {
-    packageGroup = 'com.rundeck.plugins'
+    packageGroup = 'org.rundeck.plugins'
     repositories {
         sonatype {
             nexusUrl.set(uri("https://ossrh-staging-api.central.sonatype.com/service/local/"))
