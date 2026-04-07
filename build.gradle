@@ -20,14 +20,15 @@ ext.rundeckPluginVersion = '1.2'
 
 scmVersion {
     tag {
-        prefix = 'v'
+        prefix = ''           // NO "v" prefix - see PLUGIN_TAGGING_ARCHITECTURE.md
         versionSeparator = ''
     }
     ignoreUncommittedChanges = true
+    versionCreator 'simple'  // Use simple version creator (just tag name)
 }
 
 allprojects {
-    project.version = scmVersion.version
+    project.version = scmVersion.version  // Dynamic version from git tag
     apply from: "${rootDir}/gradle/java.gradle"
 }
 
@@ -40,12 +41,22 @@ configurations {
 }
 
 repositories {
-    mavenCentral()
     mavenLocal()
+    maven {
+        name = 'Central Portal Snapshots'
+        url = 'https://central.sonatype.com/repository/maven-snapshots/'
+        content {
+            includeGroup('org.rundeck')
+        }
+    }  // Must be FIRST for Grails 7 development
+    mavenCentral()
 }
 
 dependencies {
-    implementation(libs.rundeckCore) {
+    compileOnly(libs.rundeckCore) {
+        exclude group: "com.google.guava"
+    }
+    testImplementation(libs.rundeckCore) {
         exclude group: "com.google.guava"
     }
     implementation libs.slf4jApi
@@ -104,6 +115,13 @@ jar.dependsOn(copyToLib)
 
 test {
     useJUnitPlatform()
+    
+    // Java 17+ module access for cglib/Spock mocking
+    jvmArgs = [
+        '--add-opens=java.base/java.lang=ALL-UNNAMED',
+        '--add-opens=java.base/java.util=ALL-UNNAMED',
+        '--add-opens=java.base/java.lang.reflect=ALL-UNNAMED'
+    ]
 }
 
 nexusPublishing {
