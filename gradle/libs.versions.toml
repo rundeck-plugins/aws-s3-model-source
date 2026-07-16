@@ -6,7 +6,7 @@ nexusPublish = "2.0.0"
 spock = "2.4-groovy-4.0"
 awsSdk = "1.12.797"
 cglib = "3.3.0"
-byteBuddy = "1.14.12"
+byteBuddy = "1.18.11"
 objenesis = "3.5"
 slf4j = "2.0.18"
 # Security overrides for transitive dependencies
