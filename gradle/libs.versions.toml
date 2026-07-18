@@ -2,7 +2,6 @@
 axionRelease = "1.21.2"
 groovy = "4.0.32"
 rundeckCore = "6.1.0-SNAPSHOT"
-nexusPublish = "2.0.0"
 spock = "2.4-groovy-4.0"
 awsSdk = "1.12.797"
 cglib = "3.3.0"
@@ -29,4 +28,3 @@ testLibs = ["groovyAll", "spockCore", "cglibNodep", "objenesis", "byteBuddy"]
 
 [plugins]
 axionRelease = { id = "pl.allegro.tech.build.axion-release", version.ref = "axionRelease" }
-nexusPublish = { id = "io.github.gradle-nexus.publish-plugin", version.ref = "nexusPublish" }
