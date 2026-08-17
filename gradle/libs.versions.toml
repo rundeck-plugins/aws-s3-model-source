@@ -5,7 +5,7 @@ rundeckCore = "6.1.0-20260803"
 spock = "2.4-groovy-4.0"
 awsSdk = "1.12.797"
 cglib = "3.3.0"
-byteBuddy = "1.18.11"
+byteBuddy = "1.18.12"
 objenesis = "3.6"
 slf4j = "2.0.18"
 # Security overrides for transitive dependencies
