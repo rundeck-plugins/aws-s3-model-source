@@ -1,5 +1,5 @@
 [versions]
-axionRelease = "1.21.3"
+axionRelease = "1.21.4"
 groovy = "4.0.33"
 rundeckCore = "6.2.1-20260909"
 spock = "2.4-groovy-4.0"
