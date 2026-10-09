@@ -7,7 +7,7 @@ awsSdk = "1.12.797"
 cglib = "3.3.0"
 byteBuddy = "1.18.14"
 objenesis = "3.6"
-slf4j = "2.0.19"
+slf4j = "2.0.20"
 # Security overrides for transitive dependencies
 commonsLang3 = "3.20.0"
 
