@@ -2,7 +2,10 @@ package com.rundeck.plugins.aws
 
 import com.dtolabs.rundeck.core.common.IFramework
 import com.dtolabs.rundeck.core.plugins.configuration.Property
-import software.amazon.awssdk.auth.credentials.DefaultCredentialsProvider
+import software.amazon.awssdk.auth.credentials.AwsBasicCredentials
+import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider
+import software.amazon.awssdk.auth.credentials.AwsCredentialsProviderChain
+import software.amazon.awssdk.core.exception.SdkClientException
 import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider
 import software.amazon.awssdk.regions.Region
 import software.amazon.awssdk.services.s3.S3Client
@@ -71,12 +74,15 @@ class S3ResourceModelSourceSpec extends Specification {
         thrown IllegalArgumentException
     }
 
-    def "no explicit credentials use the default credentials chain"() {
+    def "no explicit credentials use the default credentials chain with anonymous fallback"() {
         when:
         client = buildClient(props)
+        def provider = client.serviceClientConfiguration().credentialsProvider()
 
         then:
-        client.serviceClientConfiguration().credentialsProvider() instanceof DefaultCredentialsProvider
+        provider instanceof AwsCredentialsProviderChain
+        provider.toString().contains('DefaultCredentialsProvider')
+        provider.toString().contains('AnonymousCredentialsProvider')
 
         where:
         props << [
@@ -85,6 +91,30 @@ class S3ResourceModelSourceSpec extends Specification {
                 [key: '  ', secret: 'secretExample'],
                 [key: 'AKIDEXAMPLE', secret: ''],
         ]
+    }
+
+    def "anonymous credentials are used when the default chain finds none"() {
+        given:
+        AwsCredentialsProvider none = { throw SdkClientException.create('no credentials') } as AwsCredentialsProvider
+
+        when:
+        def creds = S3Base.withAnonymousFallback(none).resolveCredentials()
+
+        then:
+        creds.accessKeyId() == null
+        creds.secretAccessKey() == null
+    }
+
+    def "default chain credentials take precedence over anonymous"() {
+        given:
+        AwsCredentialsProvider found = { AwsBasicCredentials.create('AKIDCHAIN', 'secretChain') } as AwsCredentialsProvider
+
+        when:
+        def creds = S3Base.withAnonymousFallback(found).resolveCredentials()
+
+        then:
+        creds.accessKeyId() == 'AKIDCHAIN'
+        creds.secretAccessKey() == 'secretChain'
     }
 
     def "region without endpoint configures the region and no endpoint override"() {
@@ -126,9 +156,35 @@ class S3ResourceModelSourceSpec extends Specification {
         'https://s3.dualstack.ap-south-1.amazonaws.com' | 'ap-south-1'
         'https://S3.CA-CENTRAL-1.AMAZONAWS.COM'    | 'ca-central-1'
         's3.cn-north-1.amazonaws.com.cn'           | 'cn-north-1'
-        's3.amazonaws.com'                         | 'us-east-1'
+        's3-fips.us-gov-west-1.amazonaws.com'      | 'us-gov-west-1'
+        's3-fips-us-gov-west-1.amazonaws.com'      | 'us-gov-west-1'
+        's3-fips.dualstack.us-east-2.amazonaws.com'| 'us-east-2'
         'http://minio:9000'                        | 'us-east-1'
         'https://storage.example.com/s3'           | 'us-east-1'
+    }
+
+    def "global AWS endpoint discovers the bucket region instead of overriding the endpoint"() {
+        when:
+        client = buildClient(region: 'us-east-1', endpoint: endpoint)
+
+        then:
+        !client.serviceClientConfiguration().endpointOverride().isPresent()
+        client.serviceClientConfiguration().region() == Region.US_EAST_1
+        client.getClass().simpleName == 'S3CrossRegionSyncClient'
+
+        where:
+        endpoint << ['s3.amazonaws.com', 'https://s3.amazonaws.com', 's3-external-1.amazonaws.com']
+    }
+
+    def "regional and custom endpoints do not enable cross-region access"() {
+        when:
+        client = buildClient(region: 'us-east-1', endpoint: endpoint)
+
+        then:
+        client.getClass().simpleName != 'S3CrossRegionSyncClient'
+
+        where:
+        endpoint << ['s3.us-east-2.amazonaws.com', 'http://minio:9000']
     }
 
     def "path style setting controls the URL style"() {

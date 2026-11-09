@@ -24,6 +24,8 @@ allows you to externally configure the credentials in any of these ways:
 
 Note: the AWS SDK v1 names `AWS_SECRET_KEY` and `aws.secretKey` are no longer read.
 
+If no credentials are found, requests are sent anonymously, so only publicly readable objects can be used.
+
 [1]: http://docs.aws.amazon.com/IAM/latest/UserGuide/role-usecase-ec2app.html
 
 If you want to specify access key and secret key, you can do so in the configuration:
@@ -46,7 +48,8 @@ S3 Connection uses these plugin configuration property values:
 (S3-compatible services such as MinIO usually accept `us-east-1`).
 
 `endpoint`: Optional, a custom S3 compatible endpoint to use, such as `https://my-host.com/s3` or
-`https://s3.us-east-2.amazonaws.com`. If no scheme is given, `https://` is used.
+`https://s3.us-east-2.amazonaws.com`. If no scheme is given, `https://` is used. With the global endpoint
+`s3.amazonaws.com`, the bucket's region is discovered automatically.
 
 `pathstyle`: Optional, boolean, default=False, set to True if you need to define the bucket in your S3 like endpoint URL. e.g https://\<s3_like_end_point_url\>/\<your_bucket_name\>
  A custom way of defining buckets in your endpoint. Useful for non-AWS S3 like object storage technology e.g swift stack, Optums, etc. 

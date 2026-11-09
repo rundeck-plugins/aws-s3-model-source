@@ -39,7 +39,9 @@ import com.dtolabs.rundeck.core.resources.format.UnsupportedFormatException;
 import com.dtolabs.utils.Streams;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import software.amazon.awssdk.auth.credentials.AnonymousCredentialsProvider;
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
+import software.amazon.awssdk.auth.credentials.AwsCredentialsProviderChain;
 import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
 import software.amazon.awssdk.auth.credentials.DefaultCredentialsProvider;
 import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
@@ -66,10 +68,18 @@ public class S3Base implements ResourceModelSource, WriteableModelSource {
 
     /**
      * Matches regional AWS S3 hosts such as {@code s3.us-east-2.amazonaws.com},
-     * {@code s3-us-west-2.amazonaws.com} or {@code s3.dualstack.eu-west-1.amazonaws.com}.
+     * {@code s3-us-west-2.amazonaws.com}, {@code s3.dualstack.eu-west-1.amazonaws.com} or
+     * {@code s3-fips.us-gov-west-1.amazonaws.com}.
      */
     private static final Pattern AWS_S3_HOST =
-            Pattern.compile("^(?:.+\\.)?s3[.-](?:dualstack\\.)?([a-z]{2}(?:-[a-z]+)+-\\d+)\\.amazonaws\\.com(?:\\.cn)?$");
+            Pattern.compile("^(?:.+\\.)?s3(?:-fips)?[.-](?:dualstack\\.)?([a-z]{2}(?:-[a-z]+)+-\\d+)\\.amazonaws\\.com(?:\\.cn)?$");
+
+    /**
+     * Matches the global (legacy us-east-1) AWS S3 endpoint, for which AWS SDK v1 discovered the
+     * bucket region automatically.
+     */
+    private static final Pattern AWS_S3_GLOBAL_HOST =
+            Pattern.compile("^(?:.+\\.)?s3(?:-external-1)?\\.amazonaws\\.com$");
 
     private String accessKey;
     private String secretKey;
@@ -255,6 +265,10 @@ public class S3Base implements ResourceModelSource, WriteableModelSource {
     /**
      * Builds the S3 client builder from the configured credentials, region, endpoint and
      * path-style setting.
+     * <p>
+     * The global endpoint ({@code s3.amazonaws.com}) is not used as an endpoint override;
+     * instead cross-region access is enabled so the bucket's region is discovered, as AWS SDK
+     * v1 did.
      *
      * @return configured builder
      */
@@ -264,15 +278,41 @@ public class S3Base implements ResourceModelSource, WriteableModelSource {
         }
         AwsCredentialsProvider credentialsProvider = useKey
                 ? StaticCredentialsProvider.create(AwsBasicCredentials.create(accessKey, secretKey))
-                : DefaultCredentialsProvider.builder().build();
+                : withAnonymousFallback(DefaultCredentialsProvider.builder().build());
         S3ClientBuilder builder = S3Client.builder()
                 .credentialsProvider(credentialsProvider)
                 .region(signingRegion())
                 .serviceConfiguration(S3Configuration.builder().pathStyleAccessEnabled(pathStyle).build());
-        if (!isBlank(endpoint)) {
+        if (isGlobalAwsEndpoint()) {
+            builder.crossRegionAccessEnabled(true);
+        } else if (!isBlank(endpoint)) {
             builder.endpointOverride(normalizeEndpoint(endpoint));
         }
         return builder;
+    }
+
+    /**
+     * Falls back to anonymous access when the given provider finds no credentials, matching the
+     * AWS SDK v1 S3 client, so public objects can still be read without credentials. The last
+     * successful provider is not cached, so credentials that appear later are picked up.
+     *
+     * @param provider primary credentials provider
+     * @return provider chain ending with anonymous credentials
+     */
+    static AwsCredentialsProvider withAnonymousFallback(AwsCredentialsProvider provider){
+        return AwsCredentialsProviderChain.builder()
+                .reuseLastProviderEnabled(false)
+                .credentialsProviders(provider, AnonymousCredentialsProvider.create())
+                .build();
+    }
+
+    private boolean isGlobalAwsEndpoint(){
+        return !isBlank(endpoint) && AWS_S3_GLOBAL_HOST.matcher(endpointHost()).matches();
+    }
+
+    private String endpointHost(){
+        String host = normalizeEndpoint(endpoint).getHost();
+        return host == null ? "" : host.toLowerCase();
     }
 
     /**
@@ -283,8 +323,7 @@ public class S3Base implements ResourceModelSource, WriteableModelSource {
      */
     Region signingRegion(){
         if (!isBlank(endpoint)) {
-            String host = normalizeEndpoint(endpoint).getHost();
-            Matcher matcher = AWS_S3_HOST.matcher(host == null ? "" : host.toLowerCase());
+            Matcher matcher = AWS_S3_HOST.matcher(endpointHost());
             if (matcher.matches()) {
                 return Region.of(matcher.group(1));
             }
