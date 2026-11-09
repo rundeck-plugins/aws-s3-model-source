@@ -63,13 +63,31 @@ dependencies {
     // Add secure commons-lang3 to provide alternative to vulnerable commons-lang 2.6
     implementation(libs.commonsLang3)
     
+    // AWS SDK for Java v2, versions managed by the BOM
+    implementation platform(libs.awsSdkBom)
+    pluginLibs platform(libs.awsSdkBom)
+
+    // slf4j-api is excluded so the SDK's bundled copy does not shadow Rundeck's
+    // slf4j binding, which would silence this plugin's log output.
+    // Only the Apache (httpclient 4.x) HTTP client is shipped; the netty and
+    // apache5 clients are excluded.
     pluginLibs(libs.awsSdkS3) {
         exclude group: "com.fasterxml.jackson.core"
         exclude group: "com.fasterxml.jackson.dataformat"
+        exclude group: "software.amazon.awssdk", module: "netty-nio-client"
+        exclude group: "software.amazon.awssdk", module: "apache5-client"
+        exclude group: "org.slf4j", module: "slf4j-api"
     }
+    // sts lets the default credentials chain resolve web identity (IRSA) credentials
     pluginLibs(libs.awsSdkSts) {
         exclude group: "com.fasterxml.jackson.core"
         exclude group: "com.fasterxml.jackson.dataformat"
+        exclude group: "software.amazon.awssdk", module: "netty-nio-client"
+        exclude group: "software.amazon.awssdk", module: "apache5-client"
+        exclude group: "org.slf4j", module: "slf4j-api"
+    }
+    pluginLibs(libs.awsSdkApacheClient) {
+        exclude group: "org.slf4j", module: "slf4j-api"
     }
 
     testImplementation libs.bundles.testLibs

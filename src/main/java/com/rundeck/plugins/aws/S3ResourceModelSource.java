@@ -16,7 +16,9 @@
 package com.rundeck.plugins.aws;
 
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -24,9 +26,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 
-import com.amazonaws.SDKGlobalConfiguration;
-import com.amazonaws.auth.PropertiesCredentials;
-import com.amazonaws.services.s3.S3ClientOptions;
 import com.dtolabs.rundeck.core.common.IFramework;
 import com.dtolabs.rundeck.core.plugins.Plugin;
 import com.dtolabs.rundeck.core.plugins.configuration.ConfigurationException;
@@ -121,13 +120,16 @@ public class S3ResourceModelSource implements ResourceModelSourceFactory,Describ
                     "AWS S3 Region to use.  You can use one of the supported region names.",
                     true, "us-east-1",selectValues,null,null,renderingOptionsConnection))
             .property(PropertyUtil.string(ENDPOINT, "S3 Endpoint",
-                    "S3 endpoint to connect to, the region is ignored if this is set.", false,
+                    "S3 endpoint to connect to, e.g. https://minio.example.com:9000. If no scheme is given, https is used. " +
+                            "The region is taken from regional AWS hosts (e.g. s3.us-east-2.amazonaws.com); for other " +
+                            "endpoints the configured region is used to sign requests.", false,
                     null,null,null,renderingOptionsConnection))
             .property(PropertyUtil.bool(FORCEV4, "Force Signature v4",
-                    "Whether to force use of Signature Version 4 authentication. Default: false",
+                    "Deprecated: ignored. AWS SDK v2 always uses Signature Version 4.",
                     false,"false",null,renderingOptionsConnection))
             .property(PropertyUtil.bool(USESIGV2, "Use Signature v2",
-                    "Use of Signature Version 2 authentication for old container. Default: false",
+                    "Deprecated: Signature Version 2 is not supported by AWS SDK v2. If set, a warning is logged and " +
+                            "Signature Version 4 is used.",
                     false,"false",null,renderingOptionsConnection))
             .property(PropertyUtil.bool(PATHSTYLE, "Use Path Style",
                     "Whether to access the Endpoint using `endpoint/bucket` style, default: false. The default will " +
@@ -161,28 +163,18 @@ public class S3ResourceModelSource implements ResourceModelSourceFactory,Describ
         String fileName = properties.getProperty(FILE);
         String extension =  properties.getProperty(EXTENSION);
         final S3Base s3 = new S3Base(bucketName,fileName,extension,framework);
-        if(properties.getProperty(KEY) != null && properties.getProperty(SECRET) != null) {
+        if(!S3Base.isBlank(properties.getProperty(KEY)) && !S3Base.isBlank(properties.getProperty(SECRET))) {
             s3.setCredentials(properties.getProperty(KEY), properties.getProperty(SECRET));
-        }else if(properties.getProperty(CREDENTIALFILE) != null){
+        }else if(!S3Base.isBlank(properties.getProperty(CREDENTIALFILE))){
             File creds = new File(properties.getProperty(CREDENTIALFILE));
             if (!creds.exists() || !creds.canRead()) {
                 throw new IllegalArgumentException("Credentials file does not exist or cannot be read: " +
                         properties.getProperty(CREDENTIALFILE));
             }
-            try {
-                PropertiesCredentials cred = new PropertiesCredentials(creds);
-                s3.setCredentials(cred);
-            } catch (IOException e) {
-                throw new RuntimeException("Credentials file could not be read: " + properties.getProperty(CREDENTIALFILE) + ": " + e
-                        .getMessage(), e);
-            }
+            loadCredentialsFile(creds, s3);
         }
-        if (Boolean.valueOf(properties.getProperty(FORCEV4))) {
-            System.setProperty(SDKGlobalConfiguration.ENFORCE_S3_SIGV4_SYSTEM_PROPERTY, "true");
-        }
-        if (null == properties.getProperty(ENDPOINT) || "".equals(properties.getProperty(ENDPOINT).trim())) {
-            s3.setRegion(regionName);
-        } else {
+        s3.setRegion(regionName);
+        if (!S3Base.isBlank(properties.getProperty(ENDPOINT))) {
             s3.setEndpoint(properties.getProperty(ENDPOINT));
         }
         if (Boolean.valueOf(properties.getProperty(WRITABLE))) {
@@ -191,14 +183,34 @@ public class S3ResourceModelSource implements ResourceModelSourceFactory,Describ
         if (Boolean.valueOf(properties.getProperty(USESIGV2))) {
             s3.setUseSigV2();
         }
-
-        if(Boolean.valueOf(properties.getProperty(PATHSTYLE))) {
-            S3ClientOptions clientOptions = new S3ClientOptions();
-            clientOptions.setPathStyleAccess(Boolean.valueOf(properties.getProperty(PATHSTYLE)));
-            s3.setS3ClientOptions(clientOptions);
-        }
+        s3.setPathStyle(Boolean.valueOf(properties.getProperty(PATHSTYLE)));
 
         return s3;
+    }
+
+    /**
+     * Reads the {@code accessKey} and {@code secretKey} entries of a credentials properties file
+     * and sets them on the source.
+     *
+     * @param file credentials properties file
+     * @param s3   source to configure
+     * @throws IllegalArgumentException if either key is missing
+     */
+    private static void loadCredentialsFile(File file, S3Base s3) {
+        Properties creds = new Properties();
+        try (InputStream is = new FileInputStream(file)) {
+            creds.load(is);
+        } catch (IOException e) {
+            throw new RuntimeException("Credentials file could not be read: " + file + ": " + e
+                    .getMessage(), e);
+        }
+        String accessKey = creds.getProperty("accessKey");
+        String secretKey = creds.getProperty("secretKey");
+        if (S3Base.isBlank(accessKey) || S3Base.isBlank(secretKey)) {
+            throw new IllegalArgumentException("The specified file (" + file.getAbsolutePath()
+                    + ") doesn't contain the expected properties 'accessKey' and 'secretKey'.");
+        }
+        s3.setCredentials(accessKey.trim(), secretKey.trim());
     }
 
 
