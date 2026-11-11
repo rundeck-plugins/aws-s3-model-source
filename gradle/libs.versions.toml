@@ -3,7 +3,7 @@ axionRelease = "1.21.4"
 groovy = "4.0.33"
 rundeckCore = "6.3.0-20261022"
 spock = "2.4-groovy-4.0"
-awsSdk = "1.12.797"
+awsSdk = "2.55.11"
 cglib = "3.3.0"
 byteBuddy = "1.18.17-jdk5"
 objenesis = "3.6"
@@ -15,8 +15,10 @@ commonsLang3 = "3.21.0"
 rundeckCore = { group = "org.rundeck", name = "rundeck-core", version.ref = "rundeckCore" }
 groovyAll = { group = "org.apache.groovy", name = "groovy-all", version.ref = "groovy" }
 spockCore = { group = "org.spockframework", name = "spock-core", version.ref = "spock" }
-awsSdkS3 = { group = "com.amazonaws", name = "aws-java-sdk-s3", version.ref = "awsSdk" }
-awsSdkSts = { group = "com.amazonaws", name = "aws-java-sdk-sts", version.ref = "awsSdk" }
+awsSdkBom = { group = "software.amazon.awssdk", name = "bom", version.ref = "awsSdk" }
+awsSdkS3 = { group = "software.amazon.awssdk", name = "s3" }
+awsSdkSts = { group = "software.amazon.awssdk", name = "sts" }
+awsSdkApacheClient = { group = "software.amazon.awssdk", name = "apache-client" }
 cglibNodep = { group = "cglib", name = "cglib-nodep", version.ref = "cglib" }
 objenesis = { group = "org.objenesis", name = "objenesis", version.ref = "objenesis" }
 byteBuddy = { group = "net.bytebuddy", name = "byte-buddy", version.ref = "byteBuddy" }

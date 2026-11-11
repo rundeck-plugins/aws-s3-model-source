@@ -21,20 +21,12 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.net.URI;
 import java.nio.file.Files;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 
-import com.amazonaws.AmazonClientException;
-import com.amazonaws.ClientConfiguration;
-import com.amazonaws.auth.AWSCredentials;
-import com.amazonaws.auth.BasicAWSCredentials;
-import com.amazonaws.auth.PropertiesCredentials;
-import com.amazonaws.regions.Region;
-import com.amazonaws.regions.RegionUtils;
-import com.amazonaws.services.s3.AmazonS3;
-import com.amazonaws.services.s3.AmazonS3Client;
-import com.amazonaws.services.s3.S3ClientOptions;
-import com.amazonaws.services.s3.model.S3Object;
 import com.dtolabs.rundeck.core.common.IFramework;
 import com.dtolabs.rundeck.core.common.INodeSet;
 import com.dtolabs.rundeck.core.resources.ResourceModelSource;
@@ -47,24 +39,56 @@ import com.dtolabs.rundeck.core.resources.format.UnsupportedFormatException;
 import com.dtolabs.utils.Streams;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import software.amazon.awssdk.auth.credentials.AnonymousCredentialsProvider;
+import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
+import software.amazon.awssdk.auth.credentials.AwsCredentialsProviderChain;
+import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
+import software.amazon.awssdk.auth.credentials.DefaultCredentialsProvider;
+import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
+import software.amazon.awssdk.core.ResponseInputStream;
+import software.amazon.awssdk.core.exception.SdkException;
+import software.amazon.awssdk.core.sync.RequestBody;
+import software.amazon.awssdk.regions.Region;
+import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.S3ClientBuilder;
+import software.amazon.awssdk.services.s3.S3Configuration;
+import software.amazon.awssdk.services.s3.model.GetObjectRequest;
+import software.amazon.awssdk.services.s3.model.GetObjectResponse;
+import software.amazon.awssdk.services.s3.model.HeadObjectRequest;
+import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 
-public class S3Base implements AWSCredentials,ResourceModelSource, WriteableModelSource {
+/**
+ * Resource model source backed by a file stored in an S3 bucket, using the AWS SDK for Java v2.
+ */
+public class S3Base implements ResourceModelSource, WriteableModelSource {
 
     private static final Logger logger = LoggerFactory.getLogger(S3Base.class);
 
-    private String AWSAccessKeyId;
-    private String AWSSecretKey;
-    private boolean useKey = false;
-    private PropertiesCredentials cred;
-    private boolean useFile = false;
+    static final String DEFAULT_REGION = "us-east-1";
 
-    private S3ClientOptions clientOptions;
-    private boolean useClientOptions = false;
+    /**
+     * Matches regional AWS S3 hosts such as {@code s3.us-east-2.amazonaws.com},
+     * {@code s3-us-west-2.amazonaws.com}, {@code s3.dualstack.eu-west-1.amazonaws.com} or
+     * {@code s3-fips.us-gov-west-1.amazonaws.com}.
+     */
+    private static final Pattern AWS_S3_HOST =
+            Pattern.compile("^(?:.+\\.)?s3(?:-fips)?[.-](?:dualstack\\.)?([a-z]{2}(?:-[a-z]+)+-\\d+)\\.amazonaws\\.com(?:\\.cn)?$");
+
+    /**
+     * Matches the global (legacy us-east-1) AWS S3 endpoint, for which AWS SDK v1 discovered the
+     * bucket region automatically.
+     */
+    private static final Pattern AWS_S3_GLOBAL_HOST =
+            Pattern.compile("^(?:.+\\.)?s3(?:-external-1)?\\.amazonaws\\.com$");
+
+    private String accessKey;
+    private String secretKey;
+    private boolean useKey = false;
+
+    private boolean pathStyle = false;
 
     private String regionName;
-    private boolean useRegion = false;
     private String endpoint;
-    private boolean useEndpoint = false;
     private boolean useSigV2 = false;
 
     private String bucket;
@@ -75,11 +99,16 @@ public class S3Base implements AWSCredentials,ResourceModelSource, WriteableMode
     private boolean writable=false;
 
     private IFramework framework;
-    private AmazonS3 amazonS3;
+    private S3Client s3Client;
 
 
-    public void setAmazonS3(AmazonS3 amazonS3){
-        this.amazonS3 = amazonS3;
+    /**
+     * Sets the S3 client to use instead of building one from the configuration.
+     *
+     * @param s3Client client to use
+     */
+    public void setS3Client(S3Client s3Client){
+        this.s3Client = s3Client;
     }
 
     public S3Base(String bucket, String filePath,
@@ -90,49 +119,60 @@ public class S3Base implements AWSCredentials,ResourceModelSource, WriteableMode
         this.framework=framework;
     }
 
-    public void setCredentials(String AWSAccessKeyId, String AWSSecretKey){
-        this.AWSAccessKeyId = AWSAccessKeyId;
-        this.AWSSecretKey = AWSSecretKey;
+    /**
+     * Uses static credentials instead of the default credentials provider chain.
+     *
+     * @param accessKey AWS access key id
+     * @param secretKey AWS secret access key
+     */
+    public void setCredentials(String accessKey, String secretKey){
+        this.accessKey = accessKey;
+        this.secretKey = secretKey;
         this.useKey = true;
     }
 
-    public void setCredentials(PropertiesCredentials cred){
-        this.cred = cred;
-        this.useFile = true;
-    }
-
+    /**
+     * Sets the AWS region, also used to sign requests sent to a custom endpoint.
+     *
+     * @param region region name, e.g. us-east-1
+     */
     public void setRegion(String region){
         this.regionName = region;
-        this.useRegion = true;
     }
 
     public void setWritable(){
         this.writable=true;
     }
 
+    /**
+     * Sets a custom S3 endpoint. When no scheme is given, https is assumed.
+     *
+     * @param endpoint endpoint host or URL
+     */
     public void setEndpoint(String endpoint){
         this.endpoint = endpoint;
-        this.useEndpoint = true;
     }
 
-    public void setS3ClientOptions(S3ClientOptions clientOptions){
-        this.clientOptions = clientOptions;
-        this.useClientOptions = true;
+    /**
+     * Enables path-style access ({@code endpoint/bucket}) instead of virtual-hosted style
+     * ({@code bucket.endpoint}), needed by most S3-compatible services.
+     *
+     * @param pathStyle true to use path-style access
+     */
+    public void setPathStyle(boolean pathStyle){
+        this.pathStyle = pathStyle;
     }
 
+    /**
+     * Requests Signature Version 2. AWS SDK v2 does not support it, so a warning is logged
+     * and Signature Version 4 is used.
+     */
     public void setUseSigV2() {
         this.useSigV2=true;
     }
 
     @Override
     public INodeSet getNodes() throws ResourceModelSourceException {
-        InputStream remoteFile;
-        try {
-            remoteFile = getFile();
-        }catch (AmazonClientException e){//file doesn't exist
-            throw new ResourceModelSourceException(
-                    "Error requesting Resource Model Source from S3",e);
-        }
         final ResourceFormatParser parser;
         try {
             parser = getResourceFormatParser();
@@ -140,12 +180,18 @@ public class S3Base implements AWSCredentials,ResourceModelSource, WriteableMode
             throw new ResourceModelSourceException(
                     "Response content type is not supported: " + extension, e);
         }
-        try {
+        try (InputStream remoteFile = getFile()) {
             return parser.parseDocument(remoteFile);
+        } catch (SdkException e) {//file doesn't exist
+            throw new ResourceModelSourceException(
+                    "Error requesting Resource Model Source from S3",e);
         } catch (ResourceFormatParserException e) {
             throw new ResourceModelSourceException(
                     "Error requesting Resource Model Source from S3, "
                             + "Content could not be parsed: "+e.getMessage(),e);
+        } catch (IOException e) {
+            throw new ResourceModelSourceException(
+                    "Error reading Resource Model Source from S3: "+e.getMessage(),e);
         }
 
     }
@@ -158,16 +204,6 @@ public class S3Base implements AWSCredentials,ResourceModelSource, WriteableMode
     @Override
     public WriteableModelSource getWriteable() {
         return writable ? this : null;
-    }
-
-    @Override
-    public String getAWSAccessKeyId() {
-        return AWSAccessKeyId;
-    }
-
-    @Override
-    public String getAWSSecretKey() {
-        return AWSSecretKey;
     }
 
 
@@ -196,10 +232,15 @@ public class S3Base implements AWSCredentials,ResourceModelSource, WriteableMode
         }
     }
 
+    /**
+     * Checks that the remote file exists with a HEAD request, without opening its content.
+     *
+     * @return true if the object can be read, false on any error (including not found)
+     */
     @Override
     public boolean hasData() {
         try{
-            getFile();
+            getS3Client().headObject(HeadObjectRequest.builder().bucket(bucket).key(filePath).build());
         }catch (Exception e){
             return false;
         }
@@ -221,68 +262,119 @@ public class S3Base implements AWSCredentials,ResourceModelSource, WriteableMode
         return temp.length();
     }
 
-    private AmazonS3 getAmazonS3(){
-        if(null == amazonS3){
-            if(useKey) {
-                if (useSigV2) {
-                    ClientConfiguration config = new ClientConfiguration();
-                    config.setSignerOverride("S3SignerType");
-                    amazonS3 = new AmazonS3Client(new BasicAWSCredentials(this.AWSAccessKeyId, this.AWSSecretKey), config);
-                } else {
-                    amazonS3 = new AmazonS3Client(this);
-                }
-            }else if(useFile){
-                if (useSigV2) {
-                    ClientConfiguration opts = new ClientConfiguration();
-                    opts.setSignerOverride("S3SignerType");
-                    amazonS3 = new AmazonS3Client(cred, opts);
-                } else {
-                    amazonS3 = new AmazonS3Client(cred);
-                }
-            }else{
-                if (useSigV2) {
-                    ClientConfiguration opts = new ClientConfiguration();
-                    opts.setSignerOverride("S3SignerType");
-                    amazonS3 = new AmazonS3Client(opts);
-                } else {
-                    amazonS3 = new AmazonS3Client();
-                }
-            }
-            if(useRegion) {
-                Region region = RegionUtils.getRegion(regionName);
-                amazonS3.setRegion(region);
-            }else if(useEndpoint){
-                amazonS3.setEndpoint(endpoint);
-            }
-
-            if(useClientOptions){
-                amazonS3.setS3ClientOptions(clientOptions);
-            }
+    /**
+     * Builds the S3 client builder from the configured credentials, region, endpoint and
+     * path-style setting.
+     * <p>
+     * The global endpoint ({@code s3.amazonaws.com}) is not used as an endpoint override;
+     * instead cross-region access is enabled so the bucket's region is discovered, as AWS SDK
+     * v1 did.
+     *
+     * @return configured builder
+     */
+    S3ClientBuilder buildClientBuilder(){
+        if (useSigV2) {
+            logger.warn("Signature V2 is not supported in AWS SDK v2; using Signature V4.");
         }
-        return amazonS3;
+        AwsCredentialsProvider credentialsProvider = useKey
+                ? StaticCredentialsProvider.create(AwsBasicCredentials.create(accessKey, secretKey))
+                : withAnonymousFallback(DefaultCredentialsProvider.builder().build());
+        S3ClientBuilder builder = S3Client.builder()
+                .credentialsProvider(credentialsProvider)
+                .region(signingRegion())
+                .serviceConfiguration(S3Configuration.builder().pathStyleAccessEnabled(pathStyle).build());
+        if (isGlobalAwsEndpoint()) {
+            builder.crossRegionAccessEnabled(true);
+        } else if (!isBlank(endpoint)) {
+            builder.endpointOverride(normalizeEndpoint(endpoint));
+        }
+        return builder;
     }
 
-    private InputStream getFile() throws AmazonClientException {
-        AmazonS3 amazonS3 = getAmazonS3();
-        S3Object object;
+    /**
+     * Falls back to anonymous access when the given provider finds no credentials, matching the
+     * AWS SDK v1 S3 client, so public objects can still be read without credentials. The last
+     * successful provider is not cached, so credentials that appear later are picked up.
+     *
+     * @param provider primary credentials provider
+     * @return provider chain ending with anonymous credentials
+     */
+    static AwsCredentialsProvider withAnonymousFallback(AwsCredentialsProvider provider){
+        return AwsCredentialsProviderChain.builder()
+                .reuseLastProviderEnabled(false)
+                .credentialsProviders(provider, AnonymousCredentialsProvider.create())
+                .build();
+    }
+
+    private boolean isGlobalAwsEndpoint(){
+        return !isBlank(endpoint) && AWS_S3_GLOBAL_HOST.matcher(endpointHost()).matches();
+    }
+
+    private String endpointHost(){
+        String host = normalizeEndpoint(endpoint).getHost();
+        return host == null ? "" : host.toLowerCase();
+    }
+
+    /**
+     * Region used to sign requests. When the endpoint is a regional AWS S3 host, its region is
+     * used, as AWS SDK v1 did; otherwise the configured region (or us-east-1 if none).
+     *
+     * @return signing region
+     */
+    Region signingRegion(){
+        if (!isBlank(endpoint)) {
+            Matcher matcher = AWS_S3_HOST.matcher(endpointHost());
+            if (matcher.matches()) {
+                return Region.of(matcher.group(1));
+            }
+        }
+        return Region.of(isBlank(regionName) ? DEFAULT_REGION : regionName.trim());
+    }
+
+    private static URI normalizeEndpoint(String endpoint){
+        String value = endpoint.trim();
+        if (!value.startsWith("http://") && !value.startsWith("https://")) {
+            value = "https://" + value;
+        }
+        return URI.create(value);
+    }
+
+    /**
+     * @param value value to check
+     * @return true if the value is null, empty or whitespace only
+     */
+    static boolean isBlank(String value){
+        return value == null || value.trim().isEmpty();
+    }
+
+    private S3Client getS3Client(){
+        if(null == s3Client){
+            s3Client = buildClientBuilder().build();
+        }
+        return s3Client;
+    }
+
+    private ResponseInputStream<GetObjectResponse> getFile() {
         logger.info("Reading Resource from S3. "+bucket+" "+filePath);
-        object = amazonS3.getObject(bucket,filePath);
-        String amazonContentType = object.getObjectMetadata().getContentType();
+        ResponseInputStream<GetObjectResponse> object = getS3Client().getObject(
+                GetObjectRequest.builder().bucket(bucket).key(filePath).build());
+        String amazonContentType = object.response().contentType();
         //we can check the xml and json content type from amazon object data
         if(extension.equalsIgnoreCase("xml") || extension.equalsIgnoreCase("json")){
-            if(!amazonContentType.equalsIgnoreCase(getMimeType())){
+            if(amazonContentType != null && !amazonContentType.equalsIgnoreCase(getMimeType())){
                 logger.warn("S3Object content type isn't equals to input content type.");
                 logger.warn(
                         "S3 Object content type: "+amazonContentType + " expected content type:"+getMimeType());
             }
         }
-        return object.getObjectContent();
+        return object;
     }
 
     private void putFile(File file){
-        AmazonS3 amazonS3 = getAmazonS3();
         logger.info("Writing Resource to S3. "+bucket+" "+filePath);
-        amazonS3.putObject(bucket,filePath,file);
+        getS3Client().putObject(
+                PutObjectRequest.builder().bucket(bucket).key(filePath).contentType(getMimeType()).build(),
+                RequestBody.fromFile(file));
     }
 
 
